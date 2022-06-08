@@ -332,35 +332,6 @@ class bcolors:
     CYANBG = '\033[106m'
 
 
-def LinearInterpolation(others_table_points, point):
-    p = []
-    result = 0
-    flag = 1
-    for i in range(len(others_table_points)):
-        p.append(others_table_points[i][0])
-    for i in range(len(p) - 1):
-        if i <= point <= i + 1:
-            x1 = others_table_points[i][0]
-            x2 = others_table_points[i + 1][0]
-            y1 = others_table_points[i][1]
-            y2 = others_table_points[i + 1][1]
-            result = (((y1 - y2) / (x1 - x2)) * point) + ((y2 * x1) - (y1 * x2)) / (x1 - x2)
-            print(bcolors.OKBLUE, "(LinearInterpolation) The approximation (interpolation) of the point ", point,
-                  " is: ", round(result, 4),
-                  bcolors.ENDC)
-            flag = 0
-    if flag:
-        x1 = others_table_points[0][0]
-        x2 = others_table_points[1][0]
-        y1 = others_table_points[0][1]
-        y2 = others_table_points[1][1]
-        m = (y1 - y2) / (x1 - x2)
-        result = y1 + m * (point - x1)
-        print(bcolors.OKBLUE, "(LinearInterpolation) The approximation (extrapolation) of the point ", point, " is: ",
-              round(result, 4),
-              bcolors.ENDC)
-
-
 def PolynomialMethod(others_table_points, x):
     print(bcolors.OKGREEN, "Polynomial Method", bcolors.ENDC)
     matrix = [[point[0] ** i for i in range(len(others_table_points))] for point in
@@ -397,172 +368,17 @@ def NevAlgorithm(others_table_points, x):
     return tot
 
 
-def LagrangeMethod(others_table_points, point):
-    xp = []
-    yp = []
-    result = 0
-    for i in range(len(others_table_points)):
-        xp.append(others_table_points[i][0])
-        yp.append(others_table_points[i][1])
-    for i in range(len(others_table_points)):
-        lagrange_i = 1
-        for j in range(len(others_table_points)):
-            if i != j:
-                lagrange_i = lagrange_i * (point - xp[j]) / (xp[i] - xp[j])
-        result += lagrange_i * yp[i]
-
-    print(bcolors.OKBLUE, "(LagrangeMethod) The approximation (interpolation) of the point ", point, " is: ",
-          round(result, 4), bcolors.ENDC)
-
-
-def cubic_spilne_solveMatrix(matrix, size):
-    for i in range(size):
-        # preprocess the matrix
-        currentPivot = abs(matrix[i][i])
-        maxRow = i
-        row = i + 1
-        while row < size:
-            if abs(matrix[row][i]) > currentPivot:
-                currentPivot = abs(matrix[row][i])
-                maxRow = row
-            row += 1
-        matrix = cubic_spilne_swapRows(matrix, i, maxRow, size)
-
-        matrix = cubic_spilne_PivotToOne(matrix, i, i, size)
-        row = i + 1
-        while row < size:
-            matrix = cubic_spilne_nullify(matrix, row, i, size, matrix[i][i])
-            row += 1
-    for i in range(1, size):
-        row = i - 1
-        while row >= 0:
-            matrix = cubic_spilne_nullify(matrix, row, i, size, matrix[i][i])
-            row -= 1
-
-    return matrix
-
-
-def cubic_spilne_identityMatrix(size):
-    matrix = []
-    for i in range(size):
-        matrix.append([])
-        for j in range(size):
-            matrix[i].append(0)
-
-    for i in range(size):
-        matrix[i][i] = 1
-    return matrix
-
-
-def cubic_spilne_swapRows(matrix, row1, row2, size):
-    identity = cubic_spilne_identityMatrix(size)
-    identity[row1], identity[row2] = identity[row2], identity[row1]
-    return cubic_spilne_multiplyMatrices(identity, matrix, size)
-
-
-def cubic_spilne_editMatrix(matrix, x, y, val):
-    matrix[x][y] = val
-    return matrix
-
-
-# assuming nxn+1 matrix
-def cubic_spilne_multiplyMatrices(matrix1, matrix2, size):
-    mat = []
-    for i in range(size + 1):
-        mat.append([])
-
-    for i in range(size):
-        for j in range(size + 1):
-            sum = 0
-            for k in range(size):
-                sum += matrix1[i][k] * matrix2[k][j]
-            mat[i].append(sum)
-    return mat
-
-
-def cubic_spilne_nullify(matrix, x, y, size, pivot):
-    identity = cubic_spilne_identityMatrix(size)
-    return cubic_spilne_multiplyMatrices(cubic_spilne_editMatrix(identity, x, y, -1 * matrix[x][y] / pivot), matrix,
-                                         size)
-
-
-def cubic_spilne_PivotToOne(matrix, x, y, size):
-    identity = cubic_spilne_identityMatrix(size)
-    return cubic_spilne_multiplyMatrices(cubic_spilne_editMatrix(identity, x, y, 1 / matrix[x][y]), matrix, size)
-
-
-class cubic_spilne_Point:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-
-def cubic_spline_interpolation(table, target):
-    gamma = []
-    mu = []
-    d = []
-    h = []
-
-    for i in range(0, len(table) - 1):
-        h.append(table[i + 1].x - table[i].x)
-
-    for i in range(1, len(table) - 1):
-        gamma.append(h[i] / (h[i] + h[i - 1]))
-        mu.append(1 - h[i] / (h[i] + h[i - 1]))
-        d.append(
-            (6 / (h[i] + h[i - 1]) * ((table[i + 1].y - table[i].y) / h[i] - (table[i].y - table[i - 1].y) / h[i - 1])))
-
-    # build matrix
-    mat = cubic_spilne_identityMatrix(len(d))
-    for i in range(len(d)):
-        mat[i][i] = 2
-        if i != 0:
-            mat[i][i - 1] = mu[i]
-        if i != len(d) - 1:
-            mat[i][i + 1] = gamma[i]
-        mat[i].append(d[i])
-
-    # extract result
-    m = [0]
-    res = cubic_spilne_solveMatrix(mat, len(d))
-    for x in range(len(res) - 1):
-        m.append(res[x][-1])
-    m.append(0)
-
-    for y in range(len(table) - 1):
-        if target > table[y].x:
-            if target < table[y + 1].x:
-                point = ((table[y + 1].x - target) ** 3 * m[y] + (target - table[y].x) ** 3 * m[y + 1]) / (6 * h[y]) \
-                        + ((table[y + 1].x - target) * table[y].y + (target - table[y].x) * table[y + 1].y) / (h[y]) \
-                        - h[y] * ((table[y + 1].x - target) * m[y] + (target - table[y].x) * m[y + 1]) / 6
-                return print(bcolors.OKBLUE, "(Natural Cubic Spline) The approximation (interpolation) of the point ",
-                             target, " is: ", round(point, 4))
-    print("Target out of bounds")
-
-
 def MainFunction():
     others_table_points = [(1.2, 3.5095), (1.3, 3.6984), (1.4, 3.9043), (1.5, 4.1293), (1.6, 4.3756)]
-    # p0 = cubic_spilne_Point(1.2, 3.5095)
-    # p1 = cubic_spilne_Point(1.3, 3.6984)
-    # p2 = cubic_spilne_Point(1.4, 3.9043)
-    # p3 = cubic_spilne_Point(1.5, 4.1293)
-    # p4 = cubic_spilne_Point(1.6, 4.3756)
-    # cubic_spline_table = [p0, p1, p2, p3, p4]
     x = 1.37
-
     print(bcolors.OKBLUE, "Interpolation & Extrapolation Methods\n", bcolors.ENDC)
     print(bcolors.OKGREEN, "Table Points", others_table_points, bcolors.ENDC)
     print(bcolors.OKGREEN, "Finding an approximation to the point ", x, bcolors.ENDC)
     print("\n")
     PolynomialMethod(others_table_points, x)
     print("\n")
-    # LinearInterpolation(others_table_points, x)
-    # print("\n")
-    # LagrangeMethod(others_table_points, x)
-    # print("\n")
     NevAlgorithm(others_table_points, x)
     print("\n")
-    # cubic_spline_interpolation(cubic_spline_table, x)
 
 
 MainFunction()
